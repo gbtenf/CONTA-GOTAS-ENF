@@ -1,0 +1,202 @@
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conta-Gotas de Enfermagem</title>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        background-color: #007BFF;
+        color: white;
+        font-family: Arial, sans-serif;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        user-select: none;
+    }
+    h1 { margin: 10px; font-size: 26px; text-align: center; }
+    .info {
+        margin: 5px;
+        font-size: 18px;
+        text-align: center;
+    }
+    select, input {
+        font-size: 18px;
+        padding: 5px 10px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        border: none;
+    }
+    input[type="number"] {
+        width: 80px;
+        text-align: center;
+    }
+    .result {
+        font-size: 28px;
+        margin: 10px;
+        font-weight: bold;
+    }
+    .ml-h {
+        font-size: 16px;
+        margin-top: -5px;
+    }
+    .button-area {
+        flex: 1;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    .click-area {
+        background-color: rgba(255,255,255,0.1);
+        border: 6px dashed white;
+        border-radius: 20px;
+        width: 90%;
+        height: 90%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        transition: background-color 0.2s, border-color 0.2s;
+        text-align: center;
+        font-size: 22px;
+        padding: 20px;
+    }
+    .click-area:active {
+        background-color: rgba(255,255,255,0.2);
+    }
+    button {
+        background-color: white;
+        color: #007BFF;
+        border: none;
+        padding: 10px 20px;
+        margin: 10px;
+        font-size: 18px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+    .verde {
+        background-color: #00CC00 !important;
+        border-color: #00CC00 !important;
+    }
+    .amarelo {
+        background-color: #FFD700 !important;
+        border-color: #FFD700 !important;
+    }
+    .vermelho {
+        background-color: #FF0000 !important;
+        border-color: #FF0000 !important;
+    }
+</style>
+</head>
+<body>
+
+<h1>Conta-Gotas de Enfermagem</h1>
+
+<div class="info">
+    Tipo de equipo:<br>
+    <select id="equipo">
+        <option value="" disabled selected>Selecione</option>
+        <option value="macro">Macro (20 gotas/ml)</option>
+        <option value="micro">Micro (60 microgotas/ml)</option>
+    </select>
+</div>
+
+<div class="info">
+    <span id="labelGotejamento">Gotejamento desejado (gotas/min):</span><br>
+    <input type="number" id="gotejamentoDesejado" placeholder="Digite" min="1">
+</div>
+
+<div class="result" id="resultado">-- gotas/min</div>
+<div class="ml-h" id="mlPorHora">-- ml/h</div>
+
+<div class="button-area">
+    <div class="click-area" id="clickArea">
+        Toque na tela<br> a cada gota que pingar
+    </div>
+</div>
+
+<button onclick="reset()">Resetar</button>
+
+<script>
+    const clickArea = document.getElementById('clickArea');
+    const resultadoEl = document.getElementById('resultado');
+    const mlPorHoraEl = document.getElementById('mlPorHora');
+    const equipoSelect = document.getElementById('equipo');
+    const gotejamentoDesejadoEl = document.getElementById('gotejamentoDesejado');
+    const labelGotejamento = document.getElementById('labelGotejamento');
+
+    let ultimoClique = null;
+
+    equipoSelect.addEventListener('change', () => {
+        if (equipoSelect.value === 'micro') {
+            labelGotejamento.textContent = "Gotejamento desejado (microgotas/min):";
+        } else {
+            labelGotejamento.textContent = "Gotejamento desejado (gotas/min):";
+        }
+    });
+
+    clickArea.addEventListener('click', () => {
+        const gotejamentoDesejado = parseFloat(gotejamentoDesejadoEl.value);
+        const tipoEquipo = equipoSelect.value;
+
+        if (!gotejamentoDesejado || !tipoEquipo) {
+            alert("Selecione o tipo de equipo e informe o gotejamento desejado.");
+            return;
+        }
+
+        const agora = Date.now();
+
+        if (ultimoClique) {
+            const intervaloSegundos = (agora - ultimoClique) / 1000;
+            const gotejamentoCalculado = (60 / intervaloSegundos).toFixed(1);
+
+            resultadoEl.textContent = `${gotejamentoCalculado} ${tipoEquipo === 'micro' ? 'microgotas' : 'gotas'}/min`;
+
+            const fator = tipoEquipo === 'macro' ? 20 : 60;
+            const mlHora = ((60 / intervaloSegundos) / fator) * 60;
+            mlPorHoraEl.textContent = `${mlHora.toFixed(1)} ml/h`;
+
+            verificaIntervalo(intervaloSegundos, gotejamentoDesejado);
+        } else {
+            resultadoEl.textContent = "-- gotas/min";
+            mlPorHoraEl.textContent = "-- ml/h";
+        }
+
+        ultimoClique = agora;
+    });
+
+    function verificaIntervalo(intervalo, gotejamentoDesejado) {
+        const intervaloIdeal = 60 / gotejamentoDesejado;
+        const diferenca = Math.abs(intervalo - intervaloIdeal);
+
+        const tolerancia3 = intervaloIdeal * (3 / gotejamentoDesejado);
+        const tolerancia6 = intervaloIdeal * (6 / gotejamentoDesejado);
+
+        clickArea.classList.remove('verde', 'amarelo', 'vermelho');
+
+        if (diferenca <= tolerancia3) {
+            clickArea.classList.add('verde');
+        } else if (diferenca <= tolerancia6) {
+            clickArea.classList.add('amarelo');
+        } else {
+            clickArea.classList.add('vermelho');
+        }
+    }
+
+    function reset() {
+        ultimoClique = null;
+        resultadoEl.textContent = "-- gotas/min";
+        mlPorHoraEl.textContent = "-- ml/h";
+        clickArea.classList.remove('verde', 'amarelo', 'vermelho');
+    }
+</script>
+
+</body>
+</html>
